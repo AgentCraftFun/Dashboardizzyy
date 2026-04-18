@@ -34,13 +34,6 @@ export const ERC20_ABI = [
 export const ASTSTR_ABI = [
   {
     type: "function",
-    name: "stats",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256[6]" }],
-  },
-  {
-    type: "function",
     name: "burnThreshold",
     stateMutability: "view",
     inputs: [],
@@ -49,6 +42,27 @@ export const ASTSTR_ABI = [
   {
     type: "function",
     name: "totalEthToBurn",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "totalEthToDev",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "pendingBurnEth",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "totalAsteroidBurned",
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],

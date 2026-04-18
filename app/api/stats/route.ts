@@ -14,17 +14,23 @@ async function loadStats(): Promise<StatsPayload> {
   } as const;
 
   const [
-    statsResult,
     burnThreshold,
     totalEthToBurn,
+    totalEthToDev,
+    pendingBurnEth,
+    totalAsteroidBurned,
     buyTotalFees,
     sellTotalFees,
     asteroidDecimalsRaw,
+    asteroidAtDead,
+    contractEthBalance,
     blockNumber,
   ] = await Promise.all([
-    publicClient.readContract({ ...contract, functionName: "stats" }),
     publicClient.readContract({ ...contract, functionName: "burnThreshold" }),
     publicClient.readContract({ ...contract, functionName: "totalEthToBurn" }),
+    publicClient.readContract({ ...contract, functionName: "totalEthToDev" }),
+    publicClient.readContract({ ...contract, functionName: "pendingBurnEth" }),
+    publicClient.readContract({ ...contract, functionName: "totalAsteroidBurned" }),
     publicClient.readContract({ ...contract, functionName: "buyTotalFees" }),
     publicClient.readContract({ ...contract, functionName: "sellTotalFees" }),
     publicClient
@@ -34,18 +40,33 @@ async function loadStats(): Promise<StatsPayload> {
         functionName: "decimals",
       })
       .catch(() => 18 as number),
+    publicClient
+      .readContract({
+        address: ADDRESSES.ASTEROID,
+        abi: [
+          {
+            type: "function",
+            name: "balanceOf",
+            stateMutability: "view",
+            inputs: [{ name: "account", type: "address" }],
+            outputs: [{ name: "", type: "uint256" }],
+          },
+        ] as const,
+        functionName: "balanceOf",
+        args: [ADDRESSES.DEAD],
+      })
+      .catch(() => 0n),
+    publicClient.getBalance({ address: ADDRESSES.ASTSTR }).catch(() => 0n),
     publicClient.getBlockNumber(),
   ]);
 
-  const s = statsResult as readonly bigint[];
-
   return {
-    asteroidAtDead: s[0].toString(),
-    contractEthBalance: s[1].toString(),
-    globalAsteroidBurned: s[2].toString(),
-    totalAsteroidBurned: s[3].toString(),
-    totalEthToDev: s[4].toString(),
-    pendingBurnEth: s[5].toString(),
+    asteroidAtDead: (asteroidAtDead as bigint).toString(),
+    contractEthBalance: (contractEthBalance as bigint).toString(),
+    globalAsteroidBurned: (asteroidAtDead as bigint).toString(),
+    totalAsteroidBurned: (totalAsteroidBurned as bigint).toString(),
+    totalEthToDev: (totalEthToDev as bigint).toString(),
+    pendingBurnEth: (pendingBurnEth as bigint).toString(),
     burnThreshold: (burnThreshold as bigint).toString(),
     totalEthToBurn: (totalEthToBurn as bigint).toString(),
     buyTotalFees: (buyTotalFees as bigint).toString(),
@@ -58,7 +79,7 @@ async function loadStats(): Promise<StatsPayload> {
 
 export async function GET() {
   try {
-    const data = await cached("stats:v2", 10_000, loadStats);
+    const data = await cached("stats:v3", 10_000, loadStats);
     return NextResponse.json(data, {
       headers: { "cache-control": "public, max-age=0, s-maxage=10" },
     });

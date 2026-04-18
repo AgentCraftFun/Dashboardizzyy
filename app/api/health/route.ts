@@ -12,17 +12,23 @@ export async function GET() {
     envRpcSet: Boolean(process.env.ETH_RPC_URL),
   };
   try {
-    const [blockNumber, stats] = await Promise.all([
+    const [blockNumber, totalAsteroidBurned, pendingBurnEth] = await Promise.all([
       publicClient.getBlockNumber(),
       publicClient.readContract({
         address: ADDRESSES.ASTSTR,
         abi: ASTSTR_ABI,
-        functionName: "stats",
+        functionName: "totalAsteroidBurned",
+      }),
+      publicClient.readContract({
+        address: ADDRESSES.ASTSTR,
+        abi: ASTSTR_ABI,
+        functionName: "pendingBurnEth",
       }),
     ]);
     result.ok = true;
     result.blockNumber = blockNumber.toString();
-    result.statsLength = Array.isArray(stats) ? stats.length : 0;
+    result.totalAsteroidBurned = (totalAsteroidBurned as bigint).toString();
+    result.pendingBurnEth = (pendingBurnEth as bigint).toString();
   } catch (err) {
     result.ok = false;
     result.error = err instanceof Error ? err.message : String(err);
