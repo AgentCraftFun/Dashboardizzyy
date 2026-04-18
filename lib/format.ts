@@ -22,7 +22,39 @@ export function formatToken(
   });
 }
 
+// Picks a sensible number of display decimals based on magnitude so tiny
+// values don't silently round to 0.00 and huge values aren't flooded with
+// noise. Works for whole-token amounts (already scaled by decimals).
+export function formatTokenSmart(
+  value: bigint | string | number,
+  tokenDecimals = 18,
+): string {
+  const v = typeof value === "bigint" ? value : BigInt(value);
+  if (v === 0n) return "0";
+  const asFloat = Number(formatUnits(v, tokenDecimals));
+  if (!Number.isFinite(asFloat)) return "—";
+  const abs = Math.abs(asFloat);
+  let decimals: number;
+  if (abs >= 1_000) decimals = 0;
+  else if (abs >= 1) decimals = 2;
+  else if (abs >= 0.01) decimals = 4;
+  else if (abs >= 0.0001) decimals = 6;
+  else decimals = 8;
+  return asFloat.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
 export function toNumber(value: bigint | string | number, decimals = 18): number {
+  const v = typeof value === "bigint" ? value : BigInt(value);
+  return Number(formatUnits(v, decimals));
+}
+
+export function toNumberWithDecimals(
+  value: bigint | string | number,
+  decimals: number,
+): number {
   const v = typeof value === "bigint" ? value : BigInt(value);
   return Number(formatUnits(v, decimals));
 }

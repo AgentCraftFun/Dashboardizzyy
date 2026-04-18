@@ -4,7 +4,6 @@ import { formatEth, formatNumber, toNumber } from "@/lib/format";
 
 type Props = {
   totalEthToBurn: string | null;
-  totalEthToDev: string | null;
   burnCount: number | null;
   buyFee: string | null;
   sellFee: string | null;
@@ -42,7 +41,6 @@ function Card({
 
 export function StatsGrid({
   totalEthToBurn,
-  totalEthToDev,
   burnCount,
   buyFee,
   sellFee,
@@ -57,7 +55,7 @@ export function StatsGrid({
 
   return (
     <section className="mx-auto mt-6 max-w-6xl px-4 sm:px-8">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Card
           label="ETH spent on burns"
           accent="ember"
@@ -72,20 +70,6 @@ export function StatsGrid({
             )
           }
           sub="Cumulative ETH swapped for $ASTEROID"
-        />
-        <Card
-          label="ETH paid to dev"
-          value={
-            totalEthToDev === null ? (
-              <span className="inline-block h-7 w-28 rounded shimmer" />
-            ) : (
-              <>
-                {formatEth(totalEthToDev, 4)}{" "}
-                <span className="text-sm text-white/50">ETH</span>
-              </>
-            )
-          }
-          sub="Cumulative dev payouts"
         />
         <Card
           label="Total burns fired"

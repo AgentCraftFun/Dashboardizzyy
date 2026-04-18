@@ -5,11 +5,17 @@ import { ETHERSCAN_TX } from "@/lib/contracts";
 import {
   formatEth,
   formatRelative,
-  formatToken,
+  formatTokenSmart,
   truncateHash,
 } from "@/lib/format";
 
-export function BiggestBurns({ burns }: { burns: BurnEvent[] }) {
+export function BiggestBurns({
+  burns,
+  asteroidDecimals,
+}: {
+  burns: BurnEvent[];
+  asteroidDecimals: number;
+}) {
   const top = [...burns]
     .sort((a, b) => {
       const ab = BigInt(a.ethSpent);
@@ -55,7 +61,7 @@ export function BiggestBurns({ burns }: { burns: BurnEvent[] }) {
                     $ASTEROID burned
                   </div>
                   <div className="num font-semibold text-white">
-                    {formatToken(b.asteroidBurned, 18, 2)}
+                    {formatTokenSmart(b.asteroidBurned, asteroidDecimals)}
                   </div>
                 </div>
                 <div className="col-span-6 text-xs text-white/50 sm:col-span-2">

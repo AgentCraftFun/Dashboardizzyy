@@ -10,6 +10,7 @@ export type StatsPayload = {
   totalEthToBurn: string;
   buyTotalFees: string;
   sellTotalFees: string;
+  asteroidDecimals: number;
   blockNumber: string;
   fetchedAt: number;
 };

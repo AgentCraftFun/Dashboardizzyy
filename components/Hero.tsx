@@ -1,19 +1,22 @@
 "use client";
 
-import { formatToken, formatUsd, toNumber } from "@/lib/format";
+import { formatTokenSmart, formatUsd, toNumberWithDecimals } from "@/lib/format";
 import { Logo } from "./Logo";
 
 export function Hero({
   totalAsteroidBurned,
   asteroidPriceUsd,
+  asteroidDecimals,
 }: {
   totalAsteroidBurned: string | null;
   asteroidPriceUsd: number | null;
+  asteroidDecimals: number;
 }) {
   const loading = totalAsteroidBurned === null;
   const usd =
     totalAsteroidBurned && asteroidPriceUsd !== null
-      ? toNumber(totalAsteroidBurned) * asteroidPriceUsd
+      ? toNumberWithDecimals(totalAsteroidBurned, asteroidDecimals) *
+        asteroidPriceUsd
       : null;
 
   return (
@@ -45,7 +48,7 @@ export function Hero({
                 <div className="h-14 w-72 rounded-lg shimmer" />
               ) : (
                 <div className="num text-5xl font-black leading-none tracking-tight text-white sm:text-6xl md:text-7xl">
-                  {formatToken(totalAsteroidBurned!, 18, 0)}
+                  {formatTokenSmart(totalAsteroidBurned!, asteroidDecimals)}
                 </div>
               )}
               <div className="mb-1 text-sm text-white/50">$ASTEROID</div>

@@ -6,7 +6,7 @@ import { ETHERSCAN_TX } from "@/lib/contracts";
 import {
   formatEth,
   formatRelative,
-  formatToken,
+  formatTokenSmart,
   truncateHash,
 } from "@/lib/format";
 
@@ -15,11 +15,13 @@ export function BurnFeed({
   loading,
   soundOn,
   lastUpdated,
+  asteroidDecimals,
 }: {
   burns: BurnEvent[];
   loading: boolean;
   soundOn: boolean;
   lastUpdated: number | null;
+  asteroidDecimals: number;
 }) {
   const [flashSet, setFlashSet] = useState<Set<string>>(new Set());
   const seenKeys = useRef<Set<string>>(new Set());
@@ -119,7 +121,7 @@ export function BurnFeed({
                       $ASTEROID burned
                     </div>
                     <div className="num font-semibold text-white">
-                      {formatToken(b.asteroidBurned, 18, 2)}
+                      {formatTokenSmart(b.asteroidBurned, asteroidDecimals)}
                     </div>
                   </div>
                   <div className="col-span-12 text-right sm:col-span-2">

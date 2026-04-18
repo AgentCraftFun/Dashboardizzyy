@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ADDRESSES, ASTSTR_ABI } from "@/lib/contracts";
+import { ADDRESSES, ASTSTR_ABI, ERC20_ABI } from "@/lib/contracts";
 import { publicClient } from "@/lib/viem";
 import { cached } from "@/lib/cache";
 import type { StatsPayload } from "@/lib/types";
@@ -19,6 +19,7 @@ async function loadStats(): Promise<StatsPayload> {
     totalEthToBurn,
     buyTotalFees,
     sellTotalFees,
+    asteroidDecimalsRaw,
     blockNumber,
   ] = await Promise.all([
     publicClient.readContract({ ...contract, functionName: "stats" }),
@@ -26,6 +27,13 @@ async function loadStats(): Promise<StatsPayload> {
     publicClient.readContract({ ...contract, functionName: "totalEthToBurn" }),
     publicClient.readContract({ ...contract, functionName: "buyTotalFees" }),
     publicClient.readContract({ ...contract, functionName: "sellTotalFees" }),
+    publicClient
+      .readContract({
+        address: ADDRESSES.ASTEROID,
+        abi: ERC20_ABI,
+        functionName: "decimals",
+      })
+      .catch(() => 18 as number),
     publicClient.getBlockNumber(),
   ]);
 
@@ -42,6 +50,7 @@ async function loadStats(): Promise<StatsPayload> {
     totalEthToBurn: (totalEthToBurn as bigint).toString(),
     buyTotalFees: (buyTotalFees as bigint).toString(),
     sellTotalFees: (sellTotalFees as bigint).toString(),
+    asteroidDecimals: Number(asteroidDecimalsRaw),
     blockNumber: blockNumber.toString(),
     fetchedAt: Math.floor(Date.now() / 1000),
   };
@@ -49,7 +58,7 @@ async function loadStats(): Promise<StatsPayload> {
 
 export async function GET() {
   try {
-    const data = await cached("stats:v1", 10_000, loadStats);
+    const data = await cached("stats:v2", 10_000, loadStats);
     return NextResponse.json(data, {
       headers: { "cache-control": "public, max-age=0, s-maxage=10" },
     });

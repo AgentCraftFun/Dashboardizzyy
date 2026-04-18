@@ -14,6 +14,23 @@ export const UNISWAP_BUY = (token: string) =>
 export const DEXSCREENER_TOKEN = (token: string) =>
   `https://dexscreener.com/ethereum/${token}`;
 
+export const ERC20_ABI = [
+  {
+    type: "function",
+    name: "decimals",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    type: "function",
+    name: "symbol",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+  },
+] as const satisfies Abi;
+
 export const ASTSTR_ABI = [
   {
     type: "function",

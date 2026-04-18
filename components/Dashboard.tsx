@@ -117,6 +117,7 @@ export function Dashboard() {
       <Hero
         totalAsteroidBurned={stats?.totalAsteroidBurned ?? null}
         asteroidPriceUsd={asteroidPrice}
+        asteroidDecimals={stats?.asteroidDecimals ?? 18}
       />
 
       <ProgressBar
@@ -126,7 +127,6 @@ export function Dashboard() {
 
       <StatsGrid
         totalEthToBurn={stats?.totalEthToBurn ?? null}
-        totalEthToDev={stats?.totalEthToDev ?? null}
         burnCount={burns ? burnList.length : null}
         buyFee={stats?.buyTotalFees ?? null}
         sellFee={stats?.sellTotalFees ?? null}
@@ -137,11 +137,15 @@ export function Dashboard() {
         loading={burns === null}
         soundOn={soundOn}
         lastUpdated={burns?.fetchedAt ?? null}
+        asteroidDecimals={stats?.asteroidDecimals ?? 18}
       />
 
       <BurnRateChart burns={burnList} />
 
-      <BiggestBurns burns={burnList} />
+      <BiggestBurns
+        burns={burnList}
+        asteroidDecimals={stats?.asteroidDecimals ?? 18}
+      />
 
       <TokenInfo pair={prices?.aststr ?? null} />
 
