@@ -6,6 +6,7 @@ import {
   ETHERSCAN_ADDR,
   UNISWAP_BUY,
 } from "@/lib/contracts";
+import { Logo } from "./Logo";
 
 export function Header({
   soundOn,
@@ -17,9 +18,7 @@ export function Header({
   return (
     <header className="flex flex-col gap-4 border-b border-white/5 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-ember-500 to-ember-700 shadow-ember text-xl">
-          🪐
-        </div>
+        <Logo size={44} priority />
         <div>
           <div className="text-lg font-semibold tracking-tight">
             ASTSTR Burn Tracker

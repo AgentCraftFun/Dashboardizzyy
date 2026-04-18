@@ -12,8 +12,10 @@ const ASTEROID_BURNED_EVENT = parseAbiItem(
   "event AsteroidBurned(uint256 ethSpent, uint256 asteroidBurned)",
 );
 
-const CHUNK = 9_999n; // keep under common 10k getLogs caps
-const DEFAULT_LOOKBACK = 200_000n; // ~28 days on mainnet
+// Keep chunks well under the tightest public-RPC getLogs window (~5k blocks).
+const CHUNK = 4_999n;
+// 50k blocks ≈ 7 days — small enough to finish on rate-limited public RPCs.
+const DEFAULT_LOOKBACK = 50_000n;
 
 function runWithLimit<T, R>(
   items: T[],
@@ -35,15 +37,15 @@ function runWithLimit<T, R>(
   return Promise.all(runners).then(() => results);
 }
 
-async function loadBurns(): Promise<BurnsPayload> {
+async function loadBurns(lookback: bigint): Promise<BurnsPayload> {
   const latest = await publicClient.getBlockNumber();
   const envStart = process.env.EVENT_START_BLOCK?.trim();
   const startFromEnv = envStart ? BigInt(envStart) : null;
   const fromBlock =
     startFromEnv && startFromEnv > 0n
       ? startFromEnv
-      : latest > DEFAULT_LOOKBACK
-        ? latest - DEFAULT_LOOKBACK
+      : latest > lookback
+        ? latest - lookback
         : 0n;
 
   const ranges: { from: bigint; to: bigint }[] = [];
@@ -52,7 +54,9 @@ async function loadBurns(): Promise<BurnsPayload> {
     ranges.push({ from: cursor, to });
   }
 
-  const logsArrays = await runWithLimit(ranges, 4, async (range) => {
+  // Serial scan to avoid rate-limiting public RPCs. With 4999-block chunks
+  // and 50k lookback this is ~10 calls; quick even on slow endpoints.
+  const logsArrays = await runWithLimit(ranges, 2, async (range) => {
     try {
       return await publicClient.getLogs({
         address: ADDRESSES.ASTSTR,
@@ -69,7 +73,7 @@ async function loadBurns(): Promise<BurnsPayload> {
 
   const uniqBlocks = Array.from(new Set(logs.map((l) => l.blockNumber!.toString())));
   const blockTimestamps = new Map<string, number>();
-  await runWithLimit(uniqBlocks, 6, async (blockStr) => {
+  await runWithLimit(uniqBlocks, 4, async (blockStr) => {
     try {
       const block = await publicClient.getBlock({ blockNumber: BigInt(blockStr) });
       blockTimestamps.set(blockStr, Number(block.timestamp));
@@ -106,11 +110,20 @@ async function loadBurns(): Promise<BurnsPayload> {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const data = await cached("burns:v1", 15_000, loadBurns);
+    const url = new URL(request.url);
+    const blocksParam = url.searchParams.get("blocks");
+    const override = blocksParam ? BigInt(blocksParam) : null;
+    const lookback =
+      override && override > 0n && override <= 500_000n
+        ? override
+        : DEFAULT_LOOKBACK;
+
+    const key = `burns:v2:${lookback.toString()}`;
+    const data = await cached(key, 60_000, () => loadBurns(lookback));
     return NextResponse.json(data, {
-      headers: { "cache-control": "public, max-age=0, s-maxage=15" },
+      headers: { "cache-control": "public, max-age=0, s-maxage=60" },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";

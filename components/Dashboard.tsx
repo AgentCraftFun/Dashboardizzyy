@@ -17,11 +17,21 @@ type FetchState = {
   burns: BurnsPayload | null;
   prices: PricePayload | null;
   error: string | null;
+  hasLoaded: boolean;
 };
 
-async function loadJson<T>(url: string, signal: AbortSignal): Promise<T> {
-  const res = await fetch(url, { cache: "no-store", signal });
-  if (!res.ok) throw new Error(`${url} -> ${res.status}`);
+async function loadJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body?.error) detail = `: ${body.error}`;
+    } catch {
+      // ignore
+    }
+    throw new Error(`${url} → HTTP ${res.status}${detail}`);
+  }
   return (await res.json()) as T;
 }
 
@@ -31,34 +41,35 @@ export function Dashboard() {
     burns: null,
     prices: null,
     error: null,
+    hasLoaded: false,
   });
   const [soundOn, setSoundOn] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const inFlight = useRef(false);
 
   const refresh = useCallback(async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const results = await Promise.allSettled([
-      loadJson<StatsPayload>("/api/stats", controller.signal),
-      loadJson<BurnsPayload>("/api/burns", controller.signal),
-      loadJson<PricePayload>("/api/price", controller.signal),
-    ]);
-    if (controller.signal.aborted) return;
-    setData((prev) => {
-      const next: FetchState = { ...prev, error: null };
-      if (results[0].status === "fulfilled") next.stats = results[0].value;
-      if (results[1].status === "fulfilled") next.burns = results[1].value;
-      if (results[2].status === "fulfilled") next.prices = results[2].value;
-      const firstReject = results.find((r) => r.status === "rejected") as
-        | PromiseRejectedResult
-        | undefined;
-      if (firstReject) {
-        const reason = firstReject.reason;
-        next.error = reason instanceof Error ? reason.message : String(reason);
-      }
-      return next;
-    });
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const results = await Promise.allSettled([
+        loadJson<StatsPayload>("/api/stats"),
+        loadJson<BurnsPayload>("/api/burns"),
+        loadJson<PricePayload>("/api/price"),
+      ]);
+      setData((prev) => {
+        const next: FetchState = { ...prev, hasLoaded: true };
+        const errors: string[] = [];
+        if (results[0].status === "fulfilled") next.stats = results[0].value;
+        else errors.push(`stats ${extractErr(results[0].reason)}`);
+        if (results[1].status === "fulfilled") next.burns = results[1].value;
+        else errors.push(`burns ${extractErr(results[1].reason)}`);
+        if (results[2].status === "fulfilled") next.prices = results[2].value;
+        else errors.push(`price ${extractErr(results[2].reason)}`);
+        next.error = errors.length ? errors.join(" · ") : null;
+        return next;
+      });
+    } finally {
+      inFlight.current = false;
+    }
   }, []);
 
   useEffect(() => {
@@ -71,19 +82,37 @@ export function Dashboard() {
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
-      abortRef.current?.abort();
     };
   }, [refresh]);
 
-  const { stats, burns, prices, error } = data;
+  const { stats, burns, prices, error, hasLoaded } = data;
   const asteroidPrice = prices?.asteroid?.priceUsd
     ? Number(prices.asteroid.priceUsd)
     : null;
   const burnList = burns?.burns ?? [];
+  const allFailed = hasLoaded && !stats && !burns && !prices;
 
   return (
     <main className="min-h-screen pb-6">
       <Header soundOn={soundOn} onToggleSound={() => setSoundOn((s) => !s)} />
+
+      {allFailed && error && (
+        <div className="mx-auto mt-6 max-w-6xl px-4 sm:px-8">
+          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-100">
+            <div className="font-semibold text-rose-200">
+              Couldn’t reach the Ethereum RPC or DEX Screener.
+            </div>
+            <div className="mt-1 text-xs text-rose-200/80">
+              Public RPCs throttle aggressively from cloud IPs. Set an{" "}
+              <code className="rounded bg-black/30 px-1">ETH_RPC_URL</code> env
+              var (Alchemy/Infura) and redeploy.
+            </div>
+            <div className="mt-2 font-mono text-[11px] text-rose-200/60">
+              {error}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Hero
         totalAsteroidBurned={stats?.totalAsteroidBurned ?? null}
@@ -116,10 +145,10 @@ export function Dashboard() {
 
       <TokenInfo pair={prices?.aststr ?? null} />
 
-      {error && (
+      {!allFailed && error && (
         <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-8">
-          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
-            Live data partially unavailable — retrying automatically.{" "}
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+            Some data is temporarily unavailable — retrying automatically.{" "}
             <span className="opacity-70">({error})</span>
           </div>
         </div>
@@ -128,4 +157,9 @@ export function Dashboard() {
       <Footer />
     </main>
   );
+}
+
+function extractErr(reason: unknown): string {
+  if (reason instanceof Error) return reason.message;
+  return String(reason);
 }
